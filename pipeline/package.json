@@ -1,0 +1,14 @@
+{
+  "name": "au-bushfires-pipeline",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Harvests the Digital Atlas bushfire archive and writes the site's aggregates.",
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "collect": "node --max-old-space-size=6144 collect.mjs"
+  },
+  "devDependencies": {
+    "mapshaper": "^0.7.50"
+  }
+}

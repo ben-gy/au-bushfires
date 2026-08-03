@@ -43,7 +43,7 @@ export const GLOSSARY: Record<string, Term> = {
   },
   ignition_cause: {
     term: 'Ignition cause',
-    def: 'How the fire started, where an investigating agency recorded it. Only about 11% of records in this archive carry a cause at all, so every cause figure on this site describes that minority and not Australian fires in general.',
+    def: 'How the fire started, where an investigating agency recorded it. Only about 11% of records in this archive carry a cause at all, so every cause figure on this site describes that minority and not Australian fires in general. The source vocabulary is only seven values, which this site relabels in plainer English: "Natural" is shown as Lightning, "Incendiary" as Deliberate, and "Undetermined", "NOT DETERMINED", "OTHER" and "WF - unknown" are all shown as Not recorded. Nothing is discarded — every source value maps to exactly one bucket.',
   },
   lga: {
     term: 'Local government area (LGA)',

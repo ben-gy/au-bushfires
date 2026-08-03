@@ -29,12 +29,12 @@ export function mount(el: HTMLElement, data: FireData, _go: (v: string) => void,
     ${viewHead({
     title: 'Every fire season since 1899',
     question: 'Which years actually burnt the most — and why don’t we remember them?',
-    blurb: `Binned July to June, because southern Australia’s ${g('fire_season', 'fire season')} straddles the new year. Every figure is corrected for ${g('multipart', 'multi-part fires')}.`,
+    blurb: `Binned July to June, because southern Australia’s ${g('fire_season', 'fire season')} straddles the new year. Every figure is corrected for ${g('multipart', 'multi-part fires')}. This is a ranking of what has been <em>mapped</em>, not of all Australian fire — the early decades are badly incomplete.`,
   })}
 
     ${statRow([
-    { value: fmtSeason(ranked[0]?.season ?? 0), label: 'Largest season on record', sub: ha(ranked[0]?.total ?? 0), tone: 'bad' },
-    { value: bs ? `${ordinal(bsRank)}` : '—', label: 'Where Black Summer ranks', sub: bs ? `${ha(bs.total)} in 2019–20` : '', tone: 'warn' },
+    { value: fmtSeason(ranked[0]?.season ?? 0), label: 'Biggest season in this data', sub: ha(ranked[0]?.total ?? 0), tone: 'bad', tip: 'Biggest of the seasons that have been mapped. It is not a claim about Australian history — 1974-75 burnt an estimated 117 million hectares nationally and appears in this archive as 2.3 million.' },
+    { value: bs ? `${ordinal(bsRank)}` : '—', label: 'Where Black Summer ranks', sub: bs ? `${ha(bs.total)} in 2019–20` : '', tone: 'warn', tip: 'Among mapped seasons. By destruction rather than area it has no rival in the modern record: 33 people died directly and over 3,000 homes were lost.' },
     { value: num(data.seasons.length), label: 'Seasons with mapped fire', sub: `${fmtSeason(data.core.totals.firstSeason)} onward`, tone: 'dom' },
     { value: ha(median(data.seasons.slice(-30).map((s) => s.total))), label: 'Median season, last 30 years', sub: 'half of seasons burn less', tone: 'dom' },
   ])}
@@ -50,6 +50,16 @@ export function mount(el: HTMLElement, data: FireData, _go: (v: string) => void,
       </div>
       <div class="chart chart-xwide" id="se-chart"></div>
       <div id="se-legend"></div>
+      <div class="note-band">
+        <strong>Do not read the early decades as history.</strong>
+        This archive is a record of fire <em>mapping</em>, and mapping barely existed before satellites.
+        The largest fire season in Australian history is generally put at 1974–75, when an estimated
+        117 million hectares burnt — about 15% of the continent, most of it in the Northern Territory.
+        It appears in this file as ${esc(ha(data.seasons.find((x) => x.season === 1974)?.total ?? 0))}.
+        Before 2020 the Northern Territory contributes nothing at all, and most pre-1990 records carry a
+        placeholder ignition date of 31 December or 1 January rather than the day the fire actually started.
+        Comparisons are safe within the satellite era; across the whole chart they are not.
+      </div>
     </section>
 
     ${card('The ten largest seasons',

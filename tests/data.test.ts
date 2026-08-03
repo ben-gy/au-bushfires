@@ -227,3 +227,71 @@ describe('correction detail', () => {
     }
   });
 });
+
+describe('cause robustness', () => {
+  it('carries a median and a zero-area count alongside the mean', () => {
+    // The mean is hostage to a single 1.7 Mha fire and to the thousands of
+    // records with no area at all; the site quotes the median instead.
+    for (const c of causes) {
+      expect(typeof c.medianArea).toBe('number');
+      expect(typeof c.zeroArea).toBe('number');
+      expect(c.zeroArea).toBeLessThanOrEqual(c.fires);
+      expect(c.medianArea).toBeLessThanOrEqual(Math.max(c.meanArea, c.medianArea));
+    }
+  });
+
+  it('still shows lightning fires typically larger than deliberate ones', () => {
+    // The site's headline cause finding, asserted on the robust statistic so a
+    // data refresh that reverses it fails loudly instead of shipping stale copy.
+    const l = causes.find((c: { cause: string }) => c.cause === 'lightning');
+    const d = causes.find((c: { cause: string }) => c.cause === 'deliberate');
+    expect(l.medianArea).toBeGreaterThan(d.medianArea);
+    expect(d.fires).toBeGreaterThan(l.fires);
+  });
+
+  it('confirms prescribed burns essentially never carry a recorded cause', () => {
+    // The Causes view states this outright; if a future release starts
+    // populating the field, the copy is wrong and must change.
+    const unknown = causes.find((c: { cause: string }) => c.cause === 'unknown');
+    const prescribedTotal = core.types.find((t: { type: string }) => t.type === 'prescribed').fires;
+    expect(unknown.byType.prescribed / prescribedTotal).toBeGreaterThan(0.95);
+  });
+});
+
+
+describe('de-duplication of records with no fire id', () => {
+  it('leaves no same-size duplicate group large enough to distort a season', () => {
+    // The bug this pins: six South Australian rows, byte-identical on state,
+    // ignition date, area (5,763,897 ha) and perimeter, were kept as six
+    // separate fires purely because their fire_id was the placeholder '0'.
+    // They contributed 34.6 Mha of phantom area and manufactured a "largest
+    // season on record" that never happened.
+    //
+    // The shipped aggregates cannot be re-keyed here, so the invariant is
+    // asserted where it shows: no season may be dominated by one impossible
+    // jump against its neighbours in the pre-satellite era.
+    const pre1990 = seasons.filter((s: { season: number }) => s.season < 1990);
+    const totals = pre1990.map((s: { total: number }) => s.total);
+    const max = Math.max(...totals);
+    const median = [...totals].sort((a: number, b: number) => a - b)[Math.floor(totals.length / 2)];
+    // 34.6 Mha of phantom area put one season ~90x its own era's median.
+    expect(max / Math.max(1, median)).toBeLessThan(40);
+  });
+
+  it('ranks the biggest seasons inside the satellite era', () => {
+    // With the duplicates removed the top seasons are all post-2000, which is
+    // what an archive of satellite-derived mapping should look like. A pre-1990
+    // season reappearing at the top means the dedupe has regressed.
+    const top = [...seasons].sort((a: { total: number }, b: { total: number }) => b.total - a.total)[0];
+    expect(top.season).toBeGreaterThan(1990);
+  });
+
+  it('keeps Black Summer ranked outside the top two but inside the top six', () => {
+    // The site states a specific rank. Assert the claim rather than trusting
+    // that generated copy stays true across a data refresh.
+    const sorted = [...seasons].sort((a: { total: number }, b: { total: number }) => b.total - a.total);
+    const rank = sorted.findIndex((s: { season: number }) => s.season === 2019) + 1;
+    expect(rank).toBeGreaterThan(1);
+    expect(rank).toBeLessThanOrEqual(6);
+  });
+});

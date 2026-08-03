@@ -118,14 +118,42 @@ describe('dedupeKey', () => {
     expect(dedupeKey(row, 0)).not.toBe(dedupeKey({ ...row, ignition_date: 1 }, 1));
   });
 
-  it('never merges rows with no usable fire id', () => {
-    // Two anonymous rows cannot be proven to be the same fire. Under-merging
-    // costs ~46 ha across the whole Black Summer season; over-merging would
-    // delete real fires.
+  it('DOES merge id-less rows that are identical on everything else', () => {
+    // This test previously asserted the opposite, and that was a real shipped
+    // bug. Six South Australian rows carrying fire_id '0', the same date, the
+    // same 5,763,897 ha and the same 7,118 km perimeter were kept as six
+    // separate fires — 34.6 Mha of phantom area, which manufactured a "largest
+    // season on record" that never happened.
+    //
+    // Two distinct fires sharing an area to the hectare AND a perimeter AND a
+    // date is not credible. The same multi-part record is.
     const anon = { ...row, fire_id: null };
-    expect(dedupeKey(anon, 0)).not.toBe(dedupeKey(anon, 1));
+    expect(dedupeKey(anon, 0)).toBe(dedupeKey(anon, 1));
     const zero = { ...row, fire_id: '0' };
-    expect(dedupeKey(zero, 0)).not.toBe(dedupeKey(zero, 1));
+    expect(dedupeKey(zero, 0)).toBe(dedupeKey(zero, 1));
+  });
+
+  it('reproduces the South Australian case that caused the bug', () => {
+    const sa = {
+      state: 'SA', fire_id: '0', ignition_date: 347068800000,
+      area_ha: 5763897, perim_km: 7118,
+    };
+    const keys = new Set([0, 1, 2, 3, 4, 5].map((i) => dedupeKey(sa, i)));
+    expect(keys.size).toBe(1);
+  });
+
+  it('still refuses to merge id-less rows with no area', () => {
+    // Zero-area rows cannot double-count area, and collapsing every 0 ha record
+    // in one state on one date would destroy fire COUNTS for no benefit.
+    const empty = { ...row, fire_id: null, area_ha: 0 };
+    expect(dedupeKey(empty, 0)).not.toBe(dedupeKey(empty, 1));
+  });
+
+  it('keeps id-less rows apart when their area or perimeter differs', () => {
+    const a = { ...row, fire_id: null };
+    expect(dedupeKey(a, 0)).not.toBe(dedupeKey({ ...a, area_ha: 162368 }, 1));
+    expect(dedupeKey(a, 0)).not.toBe(dedupeKey({ ...a, perim_km: 1291 }, 1));
+    expect(dedupeKey(a, 0)).not.toBe(dedupeKey({ ...a, state: 'SA' }, 1));
   });
 });
 

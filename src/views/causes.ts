@@ -22,6 +22,12 @@ export function mount(el: HTMLElement, data: FireData): void {
   const delib = data.causes.find((c) => c.cause === 'deliberate');
   const present = known.filter((c) => c.fires > 0);
 
+  // Prescribed burns are lit deliberately by definition, yet essentially none
+  // carry a recorded cause — the single clearest demonstration that the cause
+  // field describes what agencies investigate, not what happens.
+  const prescribedFires = data.core.types.find((t) => t.type === 'prescribed')?.fires ?? 0;
+  const prescribedNoCause = data.causes.find((c) => c.cause === 'unknown')?.byType.prescribed ?? 0;
+
   el.innerHTML = `
     ${viewHead({
     title: 'What starts Australian bushfires',
@@ -41,7 +47,15 @@ export function mount(el: HTMLElement, data: FireData): void {
     ${statRow([
     { value: delib ? num(delib.fires) : '—', label: 'Deliberately lit', sub: delib ? `${pct(delib.fires, knownFires)} of known causes` : '', tone: 'bad' },
     { value: light ? num(light.fires) : '—', label: 'Started by lightning', sub: light ? `${pct(light.fires, knownFires)} of known causes` : '', tone: 'dom' },
-    { value: light && delib && delib.meanArea ? `${(light.meanArea / delib.meanArea).toFixed(0)}×` : '—', label: 'Lightning fires are bigger', sub: light && delib ? `${num(light.meanArea)} ha vs ${num(delib.meanArea)} ha average` : '', tone: 'warn' },
+    {
+      value: light && delib && delib.medianArea ? `${(light.medianArea / delib.medianArea).toFixed(0)}×` : '—',
+      label: 'Lightning fires are bigger',
+      sub: light && delib ? `median ${num(light.medianArea)} ha vs ${num(delib.medianArea)} ha` : '',
+      tone: 'warn',
+      tip: light && delib
+        ? `Typical (median) sizes: lightning ${num(light.medianArea)} ha, deliberate ${num(delib.medianArea)} ha.\nBy mean it is ${(light.meanArea / delib.meanArea).toFixed(1)}× — but the mean is distorted by a handful of enormous fires and by the ${num(delib.zeroArea)} deliberate records with no area recorded at all.\nThe median says the same thing without being hostage to either.`
+        : undefined,
+    },
   ])}
 
     <section class="card">
@@ -61,13 +75,15 @@ export function mount(el: HTMLElement, data: FireData): void {
     'The clearest finding in this data: the causes that light the most fires are not the causes that burn the most ground.',
     `<div class="split2">
         <div><h3 class="sub-h">Number of fires</h3><div id="cz-count"></div></div>
-        <div><h3 class="sub-h">Average size of each fire</h3><div id="cz-mean"></div></div>
+        <div><h3 class="sub-h">Typical size (median)</h3><div id="cz-median"></div></div>
       </div>
-      <p class="ctl-note">Lightning strikes remote country where a fire can run for weeks before anyone reaches it. Deliberately lit fires start where people are, which is also where they get put out.</p>`)}
+      <p class="ctl-note">Lightning strikes remote country where a fire can run for weeks before anyone reaches it. Deliberately lit fires start where people are, which is also where they get put out.</p>
+      <p class="ctl-note"><strong>Median, not mean.</strong> The average is badly distorted here: a single 1.7 million hectare fire dominates one category, and thousands of records carry no area at all. The median is the size of the middle fire, and it makes the same point far more robustly.</p>`)}
 
     ${card('Cause by fire type',
-    'A cross-check: prescribed burns should almost all be recorded as prescribed burning, and they are.',
-    '<div id="cz-type"></div>')}
+    'Prescribed burns are the clearest case of missing cause data: they are lit deliberately by definition, yet essentially none carry a recorded ignition cause at all.',
+    `<div id="cz-type"></div>
+      <p class="ctl-note">Of the ${esc(num(prescribedFires))} fires typed as prescribed burns, ${esc(num(prescribedNoCause))} have no recorded cause — the agencies simply do not fill the field in for planned burning. This is why the cause figures above cannot be read as describing Australian fire in general.</p>`)}
   `;
 
   const paintMatrix = () => {
@@ -136,13 +152,13 @@ export function mount(el: HTMLElement, data: FireData): void {
     })), { format: num },
   );
 
-  el.querySelector('#cz-mean')!.innerHTML = barChart(
-    [...present].sort((a, b) => b.meanArea - a.meanArea).map((c) => ({
+  el.querySelector('#cz-median')!.innerHTML = barChart(
+    [...present].sort((a, b) => b.medianArea - a.medianArea).map((c) => ({
       key: c.cause,
       label: CAUSE_LABEL[c.cause] ?? c.cause,
-      value: c.meanArea,
+      value: c.medianArea,
       color: CAUSE_COLOR[c.cause],
-      tip: `${CAUSE_LABEL[c.cause]}\nAverage ${num(c.meanArea)} ha per fire\n${ha(c.area)} burnt in total`,
+      tip: `${CAUSE_LABEL[c.cause]}\nMedian ${num(c.medianArea)} ha per fire\nMean ${num(c.meanArea)} ha (distorted by outliers)\n${num(c.zeroArea)} of ${num(c.fires)} records have no area recorded\n${ha(c.area)} burnt in total`,
     })), { format: (n) => `${num(n)} ha` },
   );
 

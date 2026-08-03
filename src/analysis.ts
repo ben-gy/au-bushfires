@@ -68,11 +68,16 @@ export function findings(data: FireData): Finding[] {
   });
 
   // 2 — The counter-intuitive ranking.
+  //
+  // Deliberately says "in this dataset", never "on record". The archive holds no
+  // Northern Territory data before 2020 and renders 1974-75 — the largest season
+  // in Australian history at roughly 117 million hectares — as 2.3 million. A
+  // ranking across it is a ranking of what has been MAPPED, not of what burnt.
   if (bs && top && bsRank > 1) {
     out.push({
       severity: 'info',
-      title: `Black Summer is not the largest season on record — it ranks ${ordinal(bsRank)}`,
-      body: `${labelSeason(top.season)} burnt ${fmtM(top.total)} million hectares against 2019–20's ${fmtM(bs.total)} million. The difference is where: the biggest seasons are dominated by remote rangeland and savanna fires that destroy almost no homes, so they leave little public memory. Area burnt and impact are not the same measurement.`,
+      title: `Black Summer is not the biggest season in this data — it ranks ${ordinal(bsRank)}`,
+      body: `${labelSeason(top.season)} burnt ${fmtM(top.total)} million hectares against 2019–20's ${fmtM(bs.total)} million. The difference is where: the largest seasons are dominated by remote rangeland and savanna fires that destroy almost no homes, so they leave little public memory. Area burnt and impact are not the same measurement. This ranks what has been mapped, not all Australian fire — see Coverage for what is missing.`,
       view: 'seasons',
       cta: 'See every season',
     });

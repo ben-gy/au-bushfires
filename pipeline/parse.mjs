@@ -73,7 +73,9 @@ export const TYPE_LABEL = {
 export function cleanCause(raw) {
   const s = String(raw ?? '').trim().toLowerCase();
   if (!s || s === 'null' || s === 'n/a') return 'unknown';
-  if (/undetermined|not determined|unknown|other|misc/.test(s)) return 'unknown';
+  // Specific causes are tested BEFORE the catch-all. The unknown test used to
+  // run first, which meant a future compound value like "Other - powerline"
+  // would be silently binned as "not recorded" instead of powerline.
   if (/lightning|natural/.test(s)) return 'lightning';
   if (/deliberate|arson|incendiar|malicious|suspicious/.test(s)) return 'deliberate';
   if (/accident|escape|burning off|campfire|cigarett|rubbish|debris|spark/.test(s)) return 'accidental';
@@ -82,6 +84,7 @@ export function cleanCause(raw) {
   if (/powerline|electric|transmission|asset/.test(s)) return 'powerline';
   if (/railway|train/.test(s)) return 'railway';
   if (/re-?ignit|reburn|spot/.test(s)) return 'reignition';
+  if (/undetermined|not determined|unknown|other|misc/.test(s)) return 'unknown';
   return 'unknown';
 }
 
@@ -146,15 +149,31 @@ export function seasonLabel(y) {
  */
 export function dedupeKey(row, index) {
   const fid = row.fire_id == null ? '' : String(row.fire_id).trim();
-  if (!fid || fid === '0') return `#${index}`;
-  return [
-    row.state ?? '',
-    fid,
-    row.ignition_date ?? '',
-    row.area_ha ?? '',
-    row.perim_km ?? '',
-  ].join('');
+  const area = Number(row.area_ha) || 0;
+  const base = [row.state ?? '', row.ignition_date ?? '', area, row.perim_km ?? ''];
+
+  if (fid && fid !== '0') return ['id', fid, ...base].join('|');
+
+  // Rows with no usable fire_id STILL have to be de-duplicated on the rest of
+  // the tuple. Refusing to merge them at all was a real bug that shipped: six
+  // South Australian rows (OBJECTID 310689-310694) are byte-identical on state,
+  // ignition date, area (5,763,897 ha) and perimeter (7,118 km), and keeping all
+  // six contributed 34.6 Mha of phantom area - 93.6% of what this site briefly
+  // reported as the largest fire season on record.
+  //
+  // The original rule was validated only against the 2019-20 season, where it
+  // cost 46 ha. That season has almost no id-less duplicates, so the test was
+  // simply not representative of the archive.
+  //
+  // Two distinct fires sharing an identical area to the hectare AND an identical
+  // perimeter AND an identical ignition date is not credible; the same multi-part
+  // record is. This applies only where there is an area to double-count:
+  // zero-area rows stay unmerged, because collapsing every 0 ha record in one
+  // state on one date would destroy fire COUNTS while changing no area at all.
+  if (area > 0) return ['anon', ...base].join('|');
+  return `#${index}`;
 }
+
 
 /**
  * Collapse raw rows to one record per distinct fire.

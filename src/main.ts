@@ -65,7 +65,7 @@ function aboutHtml(): string {
 
     <h3>The correction</h3>
     <p>The source file stores a fire made of several separate burnt patches as one row per patch — and repeats the whole fire's area on every one of those rows. Summing the area column therefore multiplies large fires by their patch count. For the 2019–20 season it returns 31.8 million hectares instead of 16.5 million.</p>
-    <p>This site collapses repeated rows to one record per fire, grouping on state, fire ID, ignition date, area and perimeter together. Every rebuild asserts three things before it writes anything: that New South Wales in 2019–20 lands near the NSW Bushfire Inquiry's 5,520,000 hectares, that the ACT's Orroral Valley fire lands near 87,000 hectares, and that the naive total still overstates the corrected one by at least 1.9×.</p>
+    <p>This site collapses repeated rows to one record per fire, grouping on state, fire ID, ignition date, area and perimeter together. Where a record carries no usable fire ID — thousands do, or carry the placeholder <code>0</code> — the remaining four fields still group it, because two distinct fires sharing an area to the hectare, a perimeter and a date is not credible. Only rows with no area at all are left unmerged, since they cannot double-count anything. Every rebuild asserts three things before it writes anything: that New South Wales in 2019–20 lands near the NSW Bushfire Inquiry's 5,520,000 hectares, that the ACT's Orroral Valley fire lands near 87,000 hectares, and that the naive total still overstates the corrected one by at least 1.9×.</p>
     <p>The first two check <em>accuracy</em>; only the third checks the <em>correction</em>, because New South Wales and the ACT contain almost no multi-part records — de-duplicating NSW changes it by 337 hectares. The ratio is what would catch the de-duplication silently breaking, and it did catch exactly that during this site's construction.</p>
 
     <h3>Known limits</h3>
@@ -76,6 +76,7 @@ function aboutHtml(): string {
       <li><strong>Council figures count whole fires.</strong> A fire counts for a council if any part of it falls inside, at its full size — so a council's combined figure can exceed its own land area.</li>
       <li><strong>The map draws fires of 5,000 hectares and above only.</strong> Smaller fires are counted in every statistic but there are too many to draw.</li>
       <li><strong>The archive lags.</strong> History is stitched from two releases at 1 July 2020; the current season appears only in the live view.</li>
+      <li><strong>The early decades are a record of mapping, not of fire.</strong> The largest fire season in Australian history is generally put at 1974–75, when roughly 117 million hectares burnt — about 15% of the continent. It appears here as ${esc(ha(data.seasons.find((s) => s.season === 1974)?.total ?? 0))}. Most pre-1990 records also carry a placeholder ignition date of 31 December or 1 January. Season comparisons are safe within the satellite era and unsafe across the whole series.</li>
     </ul>
 
     <h3>Where the data comes from</h3>

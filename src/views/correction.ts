@@ -42,8 +42,21 @@ export function mount(el: HTMLElement, data: FireData): void {
       </div>
     </section>
 
+    <section class="card">
+      <div class="card-head">
+        <h2>The one that fooled this site</h2>
+        <p>Written up because it did real damage here, not to anyone else.</p>
+      </div>
+      <div class="explain">
+        <p>Six South Australian records share an ignition date of 31 December 1980, an area of <strong>5,763,897 hectares</strong> and a perimeter of 7,118 km — identical to the last digit. They carry no fire ID at all, only the placeholder <code>0</code>.</p>
+        <p>An earlier version of this site refused to merge records without an ID, on the reasoning that two anonymous rows cannot be <em>proven</em> to be the same fire. That rule was tested against the 2019–20 season, where it cost 46 hectares, and it looked safe. It was not: across the whole archive it left those six rows standing as six separate fires, adding <strong>28.8 million hectares</strong> of fire that never happened, and putting 1980–81 at the top of the chart as the largest season ever recorded.</p>
+        <p>It was not. Corrected, 1980–81 burnt about 8.1 million hectares and sits fifteenth. The largest season in this archive is 2012–13.</p>
+        <p class="explain-rule">Two lessons are now enforced in the build rather than remembered. A record with no ID is still de-duplicated on everything else it has, because two distinct fires cannot share an area to the hectare, a perimeter and a date. And no single fire may account for more than 85% of its own season — that one was 97.4%, a figure no chart would ever have made obvious.</p>
+      </div>
+    </section>
+
     ${card('The twelve worst offenders',
-    'Fires whose repeated rows inflate the national total the most. Bar length is the phantom area each one adds.',
+    'Records whose repeated rows inflate the national total the most, including those with no fire ID. Bar length is the phantom area each one would add.',
     '<div id="cx-worst"></div>')}
 
     <section class="card">
@@ -102,10 +115,10 @@ export function mount(el: HTMLElement, data: FireData): void {
 
   el.querySelector('#cx-worst')!.innerHTML = barChart(c.worst.map((w, i) => ({
     key: String(i),
-    label: `${w.name ?? `Fire ${w.fireId}`} (${w.state ?? '—'})`,
+    label: `${w.name ?? (w.fireId ? `Fire ${w.fireId}` : 'Unnamed record')} (${w.state ?? '—'})`,
     value: w.inflation,
     color: w.state ? STATE_COLOR[w.state] : '#8b8178',
     sub: `${w.copies} copies · ${fmtSeason(w.season)}`,
-    tip: `${w.name ?? `Fire ${w.fireId}`}\nID ${w.fireId} · ${w.state ?? 'unknown state'} · ${fmtSeason(w.season)}\nActual size: ${ha(w.area)} (${km2(w.area)})\nStored ${w.copies} times → adds ${ha(w.inflation)} of phantom area`,
+    tip: `${w.name ?? (w.fireId ? `Fire ${w.fireId}` : 'Unnamed record')}\n${w.fireId ? `ID ${w.fireId}` : 'no fire ID recorded'} · ${w.state ?? 'unknown state'} · ${fmtSeason(w.season)}\nActual size: ${ha(w.area)} (${km2(w.area)})\nStored ${w.copies} times → adds ${ha(w.inflation)} of phantom area`,
   })), { format: ha });
 }

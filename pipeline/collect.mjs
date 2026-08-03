@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 import {
   STATES, STATE_LABEL, STATE_AREA_KM2, cleanState, cleanType, cleanCause,
   CAUSE_ORDER, seasonOf, dedupe, belongsToHistoric, sizeBin, SIZE_BINS,
-  slug, titleCase, cleanName, ANCHORS,
+  slug, titleCase, cleanName, dedupeKey, ANCHORS,
 } from './parse.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -132,6 +132,13 @@ async function collectRows() {
 
 // ── Pass 2 — aggregate ──────────────────────────────────────────────────────
 
+function medianOf(xs) {
+  if (!xs.length) return 0;
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return Math.round(s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2);
+}
+
 function aggregate(rows) {
   log('Pass 2 — dedupe + aggregate');
   const { fires, rawRows, rawArea, dedupedArea } = dedupe(rows);
@@ -189,6 +196,11 @@ function aggregate(rows) {
       fires: cf.length,
       area: Math.round(area),
       meanArea: cf.length ? Math.round(area / cf.length) : 0,
+      // The mean is hostage to single outliers — one 1.74 Mha WA fire drives
+      // much of the "deliberate" average — and to the 31% of deliberate records
+      // with area_ha = 0. The median says the same thing far more robustly.
+      medianArea: medianOf(cf.map((f) => f.area_ha)),
+      zeroArea: cf.filter((f) => !(f.area_ha > 0)).length,
       byState: Object.fromEntries(STATES.map((s) => [s, cf.filter((f) => f.state === s).length])),
       // Real area per state, not the state count scaled by a national mean.
       // The estimate looked plausible in a heatmap and would have been wrong
@@ -244,13 +256,18 @@ function correction(rows) {
     if (s == null) continue;
     naiveBySeason.set(s, (naiveBySeason.get(s) ?? 0) + r.area_ha);
   }
-  // Worst offender across the whole archive, measured not assumed.
+  // Worst offender across the whole archive, measured not assumed, and grouped
+  // by the SAME key the dedupe uses so this table cannot omit a duplication the
+  // pipeline actually corrected. Skipping id-less rows here was how the single
+  // largest duplication in the file — six South Australian rows of 5,763,897 ha
+  // each — stayed invisible on the one view whose whole purpose is exposing
+  // duplication, while that view told readers every number had been corrected.
   const groups = new Map();
   for (let i = 0; i < rows.length; i += 1) {
     const r = rows[i];
-    const fid = r.fire_id == null ? '' : String(r.fire_id).trim();
-    if (!fid || fid === '0' || r.area_ha <= 0) continue;
-    const k = `${r.state}${fid}${r.ignition_date}${r.area_ha}${r.perim_km}`;
+    if (!(r.area_ha > 0)) continue;
+    const k = dedupeKey(r, i);
+    if (k.startsWith('#')) continue;
     if (!groups.has(k)) groups.set(k, { row: r, copies: 0 });
     groups.get(k).copies += 1;
   }
@@ -259,7 +276,10 @@ function correction(rows) {
     .sort((a, b) => b.inflation - a.inflation)
     .slice(0, 12)
     .map((g) => ({
-      fireId: String(g.row.fire_id).trim(),
+      fireId: (() => {
+        const f = g.row.fire_id == null ? '' : String(g.row.fire_id).trim();
+        return f && f !== '0' ? f : null;
+      })(),
       name: cleanName(g.row.fire_name),
       state: g.row.state,
       season: seasonOf(g.row.ignition_date),
@@ -528,6 +548,62 @@ function assertAnchors(bs, agg) {
   if (agg.rawRows < 300000) throw new Error(`anchor: only ${agg.rawRows} raw rows — harvest looks truncated`);
   if (agg.fires.length < 150000) throw new Error(`anchor: only ${agg.fires.length} fires after dedupe — over-merging?`);
   if (agg.fires.length > agg.rawRows) throw new Error('anchor: more fires than rows — dedupe is broken');
+
+  // THE INVARIANT THE DEDUPE EXISTS TO ENFORCE, asserted directly rather than
+  // inferred from a season total. After de-duplication no two surviving records
+  // may still be identical on (state, ignition date, area, perimeter) with a
+  // non-zero area — that combination is what a repeated multi-part row looks
+  // like, and leaving them in is exactly how six identical South Australian
+  // rows once contributed 34.6 Mha of phantom area and manufactured a
+  // "largest season on record" that never happened.
+  //
+  // Scoped to fires of 1,000 ha and up. Below that, area_ha is rounded coarsely
+  // enough that genuine collisions happen: 89 separate one-hectare WA fires
+  // share a date and a zero perimeter, and they are almost certainly 89 real
+  // fires rather than one stored 89 times. At 1,000 ha and above a byte-exact
+  // match on area AND perimeter AND date is not a coincidence.
+  const DUP_FLOOR_HA = 1000;
+  const dupSeen = new Map();
+  for (const f of agg.fires) {
+    if (!(f.area_ha >= DUP_FLOOR_HA)) continue;
+    const k = [f.state, f.ignition_date, f.area_ha, f.perim_km].join('|');
+    dupSeen.set(k, (dupSeen.get(k) ?? 0) + 1);
+  }
+  // Judged on IMPACT, not on count. The source does sometimes give two genuinely
+  // distinct fires the same size on the same day under different fire_ids, and
+  // merging those would be overreach — so a small residue is tolerated, but the
+  // phantom area it could contribute is measured and capped at 0.1% of the
+  // national total. Anything systematic blows straight through that.
+  const survivors = [...dupSeen.entries()].filter(([, n]) => n > 1);
+  const phantom = survivors.reduce((a, [k, n]) => a + (n - 1) * Number(k.split('|')[2]), 0);
+  const cap = agg.dedupedArea * 0.001;
+  if (phantom > cap) {
+    const worst = survivors.sort((a, b) => b[1] - a[1])[0];
+    throw new Error(`anchor: duplicate tuples surviving dedupe imply ${Math.round(phantom).toLocaleString()} ha of phantom area, over the ${Math.round(cap).toLocaleString()} ha cap (worst: ${worst[1]} copies of ${worst[0]})`);
+  }
+  // Never silent: say what was tolerated, even when it passes.
+  log(`  ✓ ${survivors.length} same-size duplicate group(s) above ${DUP_FLOOR_HA} ha tolerated, implying ${Math.round(phantom).toLocaleString()} ha (cap ${Math.round(cap).toLocaleString()} ha)`);
+  // No single fire may dominate its own season. Before the dedupe fix, one South
+  // Australian record accounted for 97.4% of the season it sat in — an impossible
+  // share that no amount of staring at a bar chart reveals, but which one
+  // assertion catches instantly.
+  const bySeason = new Map();
+  for (const f of agg.fires) {
+    const y = seasonOf(f.ignition_date);
+    if (y == null) continue;
+    if (!bySeason.has(y)) bySeason.set(y, { total: 0, max: 0 });
+    const e = bySeason.get(y);
+    e.total += f.area_ha;
+    if (f.area_ha > e.max) e.max = f.area_ha;
+  }
+  for (const [y, e] of bySeason) {
+    if (e.total < 1e5) continue; // too small for a share to mean anything
+    const share = e.max / e.total;
+    if (share > 0.85) {
+      throw new Error(`anchor: one fire is ${(share * 100).toFixed(1)}% of the ${y}-${String((y + 1) % 100).padStart(2, '0')} season (${Math.round(e.max).toLocaleString()} of ${Math.round(e.total).toLocaleString()} ha) — likely undetected duplication`);
+    }
+  }
+  log('  ✓ no single fire exceeds 85% of its own season');
   log(`  ✓ ${agg.rawRows.toLocaleString()} rows → ${agg.fires.length.toLocaleString()} distinct fires`);
 }
 

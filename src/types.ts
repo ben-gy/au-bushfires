@@ -60,6 +60,9 @@ export interface CauseRow {
   fires: number;
   area: number;
   meanArea: number;
+  /** Robust alternative to the mean — see the note in the collector. */
+  medianArea: number;
+  zeroArea: number;
   byState: Record<StateCode, number>;
   areaByState: Record<StateCode, number>;
   byType: Record<FireType, number>;
@@ -74,7 +77,8 @@ export interface SizeRow {
 }
 
 export interface DuplicateRow {
-  fireId: string;
+  /** null where the source gave no usable id — those groups match on the rest. */
+  fireId: string | null;
   name: string | null;
   state: StateCode | null;
   season: number | null;

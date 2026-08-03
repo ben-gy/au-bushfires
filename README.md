@@ -21,6 +21,12 @@ get 31.8 million hectares; the correct figure is 16.5 million. Most published an
 of this file are silently doubled. This site collapses repeated rows to one record per
 fire and shows both numbers side by side.
 
+Crucially, that also applies to records carrying **no fire ID at all**. Six South
+Australian rows share a date, an area of 5,763,897 ha and a perimeter to the last digit;
+keeping them apart adds 28.8 million phantom hectares and invents a record fire season.
+An early version of this site did exactly that. See *The correction* view — it is written
+up there rather than quietly patched.
+
 **Its history is split across services that overlap.** The historical layer runs to
 October 2023, the 2020–25 layer starts July 2020, and for three seasons they contain the
 same fires. Combining them adds those seasons twice. This site cuts over at 1 July 2020
@@ -39,8 +45,8 @@ council areas, so that question becomes a search box.
   are otherwise likely to publish the doubled one.
 - **Researchers, planners and RFS/CFA volunteers** who want the long series with its
   caveats stated rather than buried.
-- **Anyone who assumes Black Summer was the largest fire season on record.** It ranks
-  fifth.
+- **Anyone who assumes Black Summer was the largest fire season in the record.** Among
+  seasons that have been mapped, it ranks fourth.
 
 ## Data Sources
 
@@ -62,9 +68,11 @@ read it.
   reached it, its largest fire, and when it last burnt
 - **Map** — 7,260 real fire-scar polygons with a season slider and type filter
 - **Seasons** — 124 years of burnt area, binned July–June, with the Northern Territory
-  data gap drawn explicitly rather than left to be misread
+  data gap drawn explicitly and a standing warning not to read the pre-satellite era as
+  history
 - **The correction** — the double-counting explained, with the twenty-three-times fire
-  as a worked example and Black Summer rebuilt state by state
+  as a worked example, the six-identical-rows case that briefly fooled this site, and
+  Black Summer rebuilt state by state
 - **Fire size** — a log-scale distribution showing fire size spans six orders of
   magnitude, which is why quantile-binned maps of this data mislead
 - **Causes** — cause × state, behind a permanent strip stating that only 11% of fires
@@ -78,7 +86,7 @@ read it.
 
 - **Runtime:** Vanilla TypeScript (no framework — one page, nine views)
 - **Build:** Vite 6
-- **Testing:** Vitest — 71 tests
+- **Testing:** Vitest — 80 tests
 - **Maps:** Leaflet 1.9 with real ABS/Digital Atlas GeoJSON
 - **Hosting:** GitHub Pages (static, no backend)
 - **Data:** GitHub Actions pipeline, quarterly, plus client-side live feeds
@@ -113,13 +121,21 @@ polygons for fires of 5,000 ha and above; posts each of the 547 ABS council boun
 back to the fire service as a spatial filter to compute the regional join; and finally
 **asserts the result against published figures** before writing anything.
 
-That last pass is the point. New South Wales in 2019–20 must come out between 5.30 and
-5.65 million hectares against the widely published ~5.5 million, the ACT's Orroral
-Valley fire must land near 87,000 ha, and the naive sum must still exceed the corrected
-one by at least 1.9×. If a change breaks the correction the build fails loudly instead
-of quietly publishing doubled numbers. The same anchors are re-asserted against the
-committed JSON in `tests/data.test.ts`, so a bad file can never ship even if it was
-committed by hand.
+That last pass is the point. Five assertions must hold before anything is written:
+
+| Gate | What it catches |
+|---|---|
+| NSW 2019–20 ∈ 5.30–5.65 Mha | accuracy, against the NSW Bushfire Inquiry's 5,520,000 ha |
+| Orroral Valley ≈ 87,000 ha | accuracy, against the published ACT figure |
+| naive ÷ corrected ≥ 1.9× | the de-duplication still working at all |
+| no duplicate (state, date, area, perimeter) group above 1,000 ha implying >0.1% phantom area | duplicates surviving the merge |
+| no single fire >85% of its own season | the specific failure that put a fake record season at the top of the chart |
+
+The first two check *accuracy* and the last three check the *correction* — a distinction
+worth making, because de-duplicating NSW changes it by only 337 hectares, so the NSW
+anchor alone would never have caught the bug. All of them are re-asserted against the
+committed JSON in `tests/data.test.ts`, so a bad file cannot ship even if committed by
+hand.
 
 The frontend reads a few hundred kilobytes of JSON; the 3.5 MB fire-polygon layer loads
 only when the map is opened.
@@ -132,6 +148,11 @@ only when the map is opened.
 - **The Northern Territory is missing before 2020–21** — not because it did not burn.
 - **Council figures count whole fires.** A fire counts for a council if any part of it
   falls inside, at its full size, so a council's combined figure can exceed its own area.
+- **The early decades are a record of mapping, not of fire.** Australia's largest season
+  is generally put at 1974–75 (~117 million hectares, about 15% of the continent); it
+  appears in this archive as 2.3 million. Most pre-1990 records also carry a placeholder
+  ignition date of 31 December or 1 January. Season comparisons are safe within the
+  satellite era and unsafe across the whole series.
 - **This is a historical research tool, not a warning service.** For current warnings
   always use your state emergency service, or call 000.
 

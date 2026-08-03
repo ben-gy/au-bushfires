@@ -74,10 +74,11 @@ export function mount(el: HTMLElement, data: FireData): void {
         </tr>
         </tbody></table></div>
       <div class="note-band">
-        <strong>Two external checks.</strong>
-        New South Wales in 2019–20 comes out at <strong>${esc(ha(bs.table.find((r) => r.state === 'NSW')?.corrected ?? 0))}</strong>, against the widely published figure of about 5.5 million hectares.
+        <strong>How this is checked, and what each check proves.</strong>
+        <p><em>Accuracy.</em> New South Wales in 2019–20 comes out at <strong>${esc(ha(bs.table.find((r) => r.state === 'NSW')?.corrected ?? 0))}</strong>, against the <a href="https://www.nsw.gov.au/departments-and-agencies/premiers-department/access-to-information/nsw-bushfire-inquiry" target="_blank" rel="noopener">NSW Bushfire Inquiry</a>'s 5,520,000 ha.
         ${bs.orroral ? `The largest fire in the ACT that season is <strong>${esc(bs.orroral.name)}</strong> at <strong>${esc(num(bs.orroral.area))} ha</strong>, against the Orroral Valley fire's published ~87,000 ha.` : ''}
-        Both are asserted in this project's build: if a change to the parser breaks the correction, the build fails rather than quietly publishing doubled numbers.
+        These confirm the figures match reality — but note they do <em>not</em> test the de-duplication, because NSW and the ACT barely contain any multi-part records: collapsing them changes NSW by 337 hectares, about 0.006%.</p>
+        <p><em>The correction itself.</em> What guards that is the overstatement ratio in the last row of the table above. It is driven by Western Australia, South Australia and Victoria, where the repeated rows actually are, and the build asserts it stays at or above 1.9×. If a change stopped the de-duplication working, that assertion fails and the build stops — which is exactly what caught a pagination bug during this site's own construction.</p>
       </div>
     </section>
 

@@ -115,7 +115,7 @@ export function mount(el: HTMLElement, data: FireData): () => void {
       attributionControl: true,
     });
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions">CARTO</a> | Fire boundaries: Digital Atlas of Australia (CC BY 4.0)',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions">CARTO</a> | Fire boundaries: Digital Atlas of Australia &copy; Commonwealth of Australia (Geoscience Australia), CC BY 4.0, de-duplicated and simplified',
       subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(map);

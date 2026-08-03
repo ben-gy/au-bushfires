@@ -50,6 +50,14 @@ Data licences are separate from this project's code licence and are not ours to
 change. Their attribution requirements are met in the site's footer and About
 panel, and must not be removed.
 
+**Statement of changes** (required by CC BY 4.0 §3(a)(1)(B)): the fire records
+published here have been **modified**. Multi-part fire records were de-duplicated
+to one record per fire and area totals recalculated accordingly; three source
+layers were stitched at a 1 July 2020 cutover; fire and boundary geometry was
+simplified with mapshaper; and ignition-cause free text was collapsed into
+buckets. Neither Geoscience Australia, the Australian Bureau of Statistics nor
+the NSW Rural Fire Service endorses this analysis or its conclusions.
+
 ## Historical Bushfire Boundaries v2.0 · Historical Bushfire Extents 2020–25 · Near Real-Time Bushfire Extents
 
 Digital Atlas of Australia, compiled by the National Bushfire Intelligence

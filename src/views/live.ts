@@ -60,7 +60,7 @@ export function mount(el: HTMLElement): () => void {
     if (destroyed) return;
     map = L.map(canvas, { center: [-27.5, 133.5], zoom: 4, minZoom: 3, maxZoom: 12, preferCanvas: true });
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors, &copy; CARTO | Live extents: Digital Atlas of Australia (CC BY 4.0); incidents: NSW RFS',
+      attribution: '&copy; OpenStreetMap contributors, &copy; CARTO | Extents: Digital Atlas of Australia &copy; Commonwealth of Australia (Geoscience Australia), CC BY 4.0 | Incidents: &copy; State of New South Wales (NSW Rural Fire Service), CC BY 4.0 — for current information go to rfs.nsw.gov.au',
       subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(map);

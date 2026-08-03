@@ -65,7 +65,8 @@ function aboutHtml(): string {
 
     <h3>The correction</h3>
     <p>The source file stores a fire made of several separate burnt patches as one row per patch — and repeats the whole fire's area on every one of those rows. Summing the area column therefore multiplies large fires by their patch count. For the 2019–20 season it returns 31.8 million hectares instead of 16.5 million.</p>
-    <p>This site collapses repeated rows to one record per fire, grouping on state, fire ID, ignition date, area and perimeter together. Two published figures are asserted every time the data is rebuilt: New South Wales in 2019–20 must come out near the widely reported 5.5 million hectares, and the ACT's Orroral Valley fire near 87,000 hectares. If a change breaks the correction, the build fails rather than publishing doubled numbers.</p>
+    <p>This site collapses repeated rows to one record per fire, grouping on state, fire ID, ignition date, area and perimeter together. Every rebuild asserts three things before it writes anything: that New South Wales in 2019–20 lands near the NSW Bushfire Inquiry's 5,520,000 hectares, that the ACT's Orroral Valley fire lands near 87,000 hectares, and that the naive total still overstates the corrected one by at least 1.9×.</p>
+    <p>The first two check <em>accuracy</em>; only the third checks the <em>correction</em>, because New South Wales and the ACT contain almost no multi-part records — de-duplicating NSW changes it by 337 hectares. The ratio is what would catch the de-duplication silently breaking, and it did catch exactly that during this site's construction.</p>
 
     <h3>Known limits</h3>
     <ul>
@@ -139,7 +140,10 @@ function shell(): string {
     <main class="main-content" id="view-host"></main>
     <footer class="site-footer">
       <div class="footer-inner">
-        <span>Fire boundaries: <a href="https://digital.atlas.gov.au/" target="_blank" rel="noopener">Digital Atlas of Australia</a> © Commonwealth of Australia (Geoscience Australia), <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. Boundaries: ABS ASGS, CC BY 4.0. Live incidents: NSW RFS.</span>
+        <span>Fire boundaries: <a href="https://digital.atlas.gov.au/" target="_blank" rel="noopener">Digital Atlas of Australia</a> © Commonwealth of Australia (Geoscience Australia), <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.
+        Boundaries: <a href="https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3" target="_blank" rel="noopener">ABS ASGS 2021</a> © Commonwealth of Australia (Australian Bureau of Statistics), CC BY 4.0.
+        Live incidents: © State of New South Wales (<a href="https://www.rfs.nsw.gov.au/" target="_blank" rel="noopener">NSW Rural Fire Service</a>), CC BY 4.0 — for current information go to rfs.nsw.gov.au.
+        <br><em>Changes made:</em> fire records have been de-duplicated and area totals corrected; boundaries have been simplified. Neither Geoscience Australia, the ABS nor the NSW RFS endorse this analysis.</span>
         <span>Built by <a href="https://benrichardson.dev/">benrichardson.dev</a> · <a href="https://lab.benrichardson.dev" target="_blank" rel="noopener">more tools &amp; sites</a></span>
       </div>
     </footer>

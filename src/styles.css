@@ -459,3 +459,18 @@ td.naive { color: var(--text-tertiary); text-decoration: line-through; text-deco
   .mx-cell { min-width: 40px; }
   .view-head h1 { font-size: 1.3rem; }
 }
+
+/* ── Close controls: a real 44×44 hit area ────────────────
+   The bare glyph buttons measured 13×22 CSS px — well under the 44×44 minimum,
+   which on a phone means the ✕ is a coin-flip to hit and the overlay reads as
+   impossible to dismiss even though every handler is wired correctly. The glyph
+   stays visually small; only the touch target grows. */
+.drawer-close, .modal-close, .gloss-close {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 44px; min-height: 44px; padding: 0; border-radius: var(--radius-sm);
+}
+.drawer-close:hover, .modal-close:hover, .gloss-close:hover { background: var(--bg-elevated); }
+/* Nudge the absolutely-positioned ones back so the larger box does not push the
+   glyph away from the corner it belongs in. */
+.modal-close { top: 6px; right: 8px; }
+.gloss-close { top: 2px; right: 4px; min-width: 36px; min-height: 36px; }
